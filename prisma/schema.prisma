@@ -1,0 +1,150 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String?
+  role      Role     @default(USER)
+  avatar    String?
+  bio       String?
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agents      Agent[]
+  skills      Skill[]
+  reviews     Review[]
+  auditLogs   AuditLog[]
+  
+  reviewedSkills Skill[] @relation("SkillReviewer")
+}
+
+enum Role {
+  USER
+  ADMIN
+  EXPERT
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+model Agent {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  prompt      String   @db.Text
+  avatar      String?
+  verified    Boolean  @default(false)
+  verifiedAt  DateTime?
+  status      AgentStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  skills      Skill[]
+}
+
+enum AgentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Skill {
+  id          String      @id @default(cuid())
+  name        String
+  description String      @db.Text
+  category    String
+  content     String      @db.Text
+  dependencies String[]
+  tags        String[]
+  
+  // 审核相关
+  status      SkillStatus @default(PENDING)
+  riskLevel   RiskLevel   @default(LOW)
+  securityReport String?  @db.Text
+  
+  // 审核记录
+  verified    Boolean     @default(false)
+  verifiedAt  DateTime?
+  reviewedBy  String?
+  reviewer    User?       @relation("SkillReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt  DateTime?
+  reviewNote  String?     @db.Text
+  
+  // 统计
+  downloads   Int         @default(0)
+  rating      Float       @default(0)
+  reviewCount Int         @default(0)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id])
+  agentId     String?
+  agent       Agent?      @relation(fields: [agentId], references: [id])
+
+  reviews     Review[]
+}
+
+enum SkillStatus {
+  PENDING     // 待审核
+  TESTING     // 测试中
+  APPROVED    // 已通过
+  REJECTED    // 已拒绝
+  SUSPENDED   // 已下架
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Review {
+  id        String      @id @default(cuid())
+  rating    Int
+  content   String?     @db.Text
+  status    ReviewStatus @default(PUBLISHED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+  skillId   String
+  skill     Skill  @relation(fields: [skillId], references: [id])
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+  DELETED
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // SKILL_APPROVED, SKILL_REJECTED, USER_BANNED, etc.
+  targetId  String   // 被操作对象的ID
+  targetType String  // SKILL, USER, etc.
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+}
