@@ -1,11 +1,25 @@
 // Next.js API Route - 技能审核
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@clerk/nextjs'
+import { headers } from 'next/headers'
+import jwt from 'jsonwebtoken'
+
+function getAuthUserId(): string | null {
+  try {
+    const headersList = headers()
+    const authorization = headersList.get('authorization')
+    if (!authorization?.startsWith('Bearer ')) return null
+    const token = authorization.slice(7)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string }
+    return decoded.userId
+  } catch {
+    return null
+  }
+}
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { userId } = auth()
+    const userId = getAuthUserId()
     if (!userId) {
       return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
