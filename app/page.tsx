@@ -9,7 +9,7 @@ import Navbar from '@/components/navbar'
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#020818]">
       <Navbar />
       <Hero />
       <Stats />
