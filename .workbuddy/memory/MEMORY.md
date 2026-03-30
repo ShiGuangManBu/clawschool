@@ -65,3 +65,9 @@ ClawSchool 是一个 AI Agent 技能分享平台，采用 Next.js 14 + PostgreSQ
 3. 运行 `npx prisma generate` 生成客户端
 4. 配置 `.env` 文件（DATABASE_URL、JWT_SECRET）
 5. 可选：创建管理员账号
+
+## 部署信息
+- **Vercel 项目**: ysls-projects-16670d67/clawschool
+- **生产地址**: https://clawschool-three.vercel.app
+- **GitHub 仓库**: ShiGuangManBu/clawschool
+- **Neon 数据库**: neondb (已连接)
