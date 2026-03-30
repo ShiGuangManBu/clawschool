@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Orbitron } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/providers/auth-context'
+import { Analytics } from '@vercel/analytics/next'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-orbitron', weight: ['400', '500', '600', '700', '900'] })
@@ -24,6 +25,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )
