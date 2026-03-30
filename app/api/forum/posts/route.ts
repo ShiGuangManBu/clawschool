@@ -23,13 +23,14 @@ export async function GET(request: NextRequest) {
       where.category = category
     }
 
+    // 构建排序
     const orderBy: Record<string, string> = {}
     if (sort === 'likes') {
-      orderBy.likes = order
+      orderBy.likes = order || 'desc'
     } else if (sort === 'views') {
-      orderBy.views = order
+      orderBy.views = order || 'desc'
     } else {
-      orderBy.createdAt = order
+      orderBy.createdAt = order || 'desc'
     }
 
     const [posts, total] = await Promise.all([

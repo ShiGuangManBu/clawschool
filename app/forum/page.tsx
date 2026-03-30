@@ -54,7 +54,7 @@ export default function ForumPage() {
     setIsLoading(true)
     setError('')
     try {
-      const response = await forumApi.getPosts({
+      const response = await forumApi.getList({
         search: searchQuery,
         category: activeCategory !== 'all' ? activeCategory : undefined,
         sort: sortBy === 'views' ? 'views' : sortBy === 'likes' ? 'likes' : 'createdAt',

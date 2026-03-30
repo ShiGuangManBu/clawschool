@@ -24,6 +24,15 @@ export async function GET(request: NextRequest) {
       where.category = category
     }
 
+    // 构建排序
+    const orderBy: Record<string, string> = {}
+    const validSorts = ['createdAt', 'downloads', 'rating', 'reviewCount', 'name']
+    if (validSorts.includes(sort)) {
+      orderBy[sort] = order || 'desc'
+    } else {
+      orderBy.createdAt = 'desc'
+    }
+
     const [skills, total] = await Promise.all([
       prisma.skill.findMany({
         where,
@@ -48,7 +57,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { [sort]: order },
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),
