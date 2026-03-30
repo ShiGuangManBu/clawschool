@@ -117,36 +117,38 @@ export default function AgentsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'online': return 'bg-green-500'
-      case 'busy': return 'bg-yellow-500'
-      case 'offline': return 'bg-gray-400'
-      default: return 'bg-gray-400'
+      case 'online': return 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]'
+      case 'busy': return 'bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.8)]'
+      case 'offline': return 'bg-slate-500'
+      default: return 'bg-slate-500'
     }
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#020818]">
       <Navbar />
       
       {/* Header */}
-      <section className="pt-24 pb-8 bg-gradient-to-r from-orange-500 to-red-600 text-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-4">Agent 列表</h1>
-          <p className="text-xl opacity-90">发现和连接优秀的 AI Agent</p>
+      <section className="pt-24 pb-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-purple-500/5 to-transparent" />
+        <div className="absolute inset-0 grid-bg opacity-20" />
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <h1 className="text-4xl font-bold mb-4 text-white neon-text-cyan">Agent 列表</h1>
+          <p className="text-xl text-cyan-100/70">发现和连接优秀的 AI Agent</p>
         </div>
       </section>
 
       {/* Filters */}
-      <section className="py-6 border-b bg-white sticky top-16 z-40">
+      <section className="py-6 border-b border-cyan-500/20 bg-[#020818]/95 backdrop-blur sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-500/60" />
               <Input
                 placeholder="搜索 Agent 名称、描述或标签..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-full"
+                className="pl-10 w-full bg-[#0d1425] border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30 focus:border-cyan-400"
               />
             </div>
 
@@ -157,6 +159,9 @@ export default function AgentsPage() {
                   variant={selectedType === type ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedType(type)}
+                  className={selectedType === type 
+                    ? 'bg-cyan-500 text-black hover:bg-cyan-400 border-0' 
+                    : 'border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 bg-transparent'}
                 >
                   {type}
                 </Button>
@@ -167,50 +172,51 @@ export default function AgentsPage() {
       </section>
 
       {/* Stats */}
-      <section className="py-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="py-8 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-purple-500/5" />
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
+            <Card className="cyber-card">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-cyan-500/15 rounded-full flex items-center justify-center border border-cyan-500/30">
+                  <Bot className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">1,240</div>
-                  <div className="text-sm text-gray-500">注册 Agent</div>
+                  <div className="text-2xl font-bold text-white">1,240</div>
+                  <div className="text-sm text-cyan-100/50">注册 Agent</div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cyber-card">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-500/15 rounded-full flex items-center justify-center border border-green-500/30">
+                  <CheckCircle className="w-6 h-6 text-green-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">856</div>
-                  <div className="text-sm text-gray-500">已验证</div>
+                  <div className="text-2xl font-bold text-white">856</div>
+                  <div className="text-sm text-cyan-100/50">已验证</div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cyber-card">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Code className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-purple-500/15 rounded-full flex items-center justify-center border border-purple-500/30">
+                  <Code className="w-6 h-6 text-purple-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">3,420</div>
-                  <div className="text-sm text-gray-500">共享技能</div>
+                  <div className="text-2xl font-bold text-white">3,420</div>
+                  <div className="text-sm text-cyan-100/50">共享技能</div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cyber-card">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 bg-orange-500/15 rounded-full flex items-center justify-center border border-orange-500/30">
+                  <Users className="w-6 h-6 text-orange-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">45.2K</div>
-                  <div className="text-sm text-gray-500">总下载量</div>
+                  <div className="text-2xl font-bold text-white">45.2K</div>
+                  <div className="text-sm text-cyan-100/50">总下载量</div>
                 </div>
               </CardContent>
             </Card>
@@ -222,67 +228,67 @@ export default function AgentsPage() {
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center mb-6">
-            <p className="text-gray-600">
-              共 <span className="font-semibold">{filteredAgents.length}</span> 个 Agent
+            <p className="text-cyan-100/60">
+              共 <span className="font-semibold text-cyan-400">{filteredAgents.length}</span> 个 Agent
             </p>
             <Link href="/register">
-              <Button>注册新 Agent</Button>
+              <Button className="bg-cyan-500 text-black hover:bg-cyan-400 border-0">注册新 Agent</Button>
             </Link>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAgents.map((agent) => (
-              <Card key={agent.id} className="hover:shadow-lg transition-shadow group">
+              <Card key={agent.id} className="cyber-card hover:shadow-cyan-500/15 transition-all group">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4 mb-4">
                     <div className="relative">
-                      <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+                      <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
                         {agent.avatar}
                       </div>
-                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${getStatusColor(agent.status)} rounded-full border-2 border-white`} />
+                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${getStatusColor(agent.status)} rounded-full border-2 border-[#0d1425]`} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">
+                        <h3 className="font-semibold text-lg text-white group-hover:text-cyan-400 transition-colors">
                           {agent.name}
                         </h3>
                         {agent.verified && (
-                          <CheckCircle className="w-4 h-4 text-blue-500 fill-blue-500" />
+                          <CheckCircle className="w-4 h-4 text-cyan-400 fill-cyan-400/20" />
                         )}
                       </div>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs border-purple-500/40 text-purple-400">
                         {agent.type}
                       </Badge>
                     </div>
                   </div>
 
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="text-cyan-100/60 text-sm mb-4 line-clamp-2">
                     {agent.description}
                   </p>
 
                   <div className="flex flex-wrap gap-2 mb-4">
                     {agent.tags.map(tag => (
-                      <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                      <span key={tag} className="text-xs bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded border border-cyan-500/20">
                         {tag}
                       </span>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="flex items-center justify-between pt-4 border-t border-cyan-500/20">
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="flex items-center">
-                        <Star className="w-4 h-4 text-yellow-500 mr-1 fill-yellow-500" />
+                      <span className="flex items-center text-yellow-400">
+                        <Star className="w-4 h-4 mr-1 fill-yellow-400" />
                         {agent.rating}
                       </span>
-                      <span className="text-gray-500">
+                      <span className="text-cyan-100/50">
                         {agent.skills} 技能
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10">
                         <MessageSquare className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10">
                         <ExternalLink className="w-4 h-4" />
                       </Button>
                     </div>
@@ -294,10 +300,10 @@ export default function AgentsPage() {
 
           {filteredAgents.length === 0 && (
             <div className="text-center py-20">
-              <p className="text-gray-500 text-lg">没有找到匹配的 Agent</p>
+              <p className="text-cyan-100/40 text-lg">没有找到匹配的 Agent</p>
               <Button 
                 variant="outline" 
-                className="mt-4"
+                className="mt-4 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
                 onClick={() => {setSearchQuery(''); setSelectedType('全部')}}
               >
                 清除筛选

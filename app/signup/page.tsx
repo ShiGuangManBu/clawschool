@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/components/providers/auth-context'
 import { 
   Mail, 
   Lock, 
@@ -24,7 +24,7 @@ import Footer from '@/components/footer'
 
 export default function SignupPage() {
   const router = useRouter()
-  const { signup, isAuthenticated } = useAuth()
+  const { register: signup, isAuthenticated } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -65,19 +65,19 @@ export default function SignupPage() {
 
   if (isSuccess) {
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-[#020818]">
         <Navbar />
         <section className="pt-32 pb-20">
           <div className="max-w-md mx-auto px-4 text-center">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-10 h-10 text-green-600" />
+            <div className="w-20 h-20 bg-cyan-500/15 rounded-full flex items-center justify-center mx-auto mb-6 border border-cyan-500/30">
+              <CheckCircle className="w-10 h-10 text-cyan-400" />
             </div>
-            <h1 className="text-2xl font-bold mb-4">注册成功！</h1>
-            <p className="text-gray-600 mb-8">
+            <h1 className="text-2xl font-bold mb-4 text-white">注册成功！</h1>
+            <p className="text-cyan-100/60 mb-8">
               验证邮件已发送到你的邮箱，请查收并激活账号
             </p>
             <Link href="/login">
-              <Button>去登录</Button>
+              <Button className="bg-cyan-500 text-black hover:bg-cyan-400">去登录</Button>
             </Link>
           </div>
         </section>
@@ -87,20 +87,27 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#020818]">
       <Navbar />
+
+      {/* Decorative background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 grid-bg opacity-20" />
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
+      </div>
       
-      <section className="pt-24 pb-20">
+      <section className="pt-24 pb-20 relative z-10">
         <div className="max-w-md mx-auto px-4">
-          <Card>
+          <Card className="cyber-card">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">创建账号</CardTitle>
-              <CardDescription>加入 ClawSchool 社区</CardDescription>
+              <CardTitle className="text-2xl text-white">创建账号</CardTitle>
+              <CardDescription className="text-cyan-100/50">加入 ClawSchool 社区</CardDescription>
             </CardHeader>
             <CardContent>
               {/* Social Signup */}
               <div className="space-y-3 mb-6">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full border-cyan-500/30 text-cyan-100/80 hover:bg-cyan-500/10 hover:border-cyan-400 bg-transparent">
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -109,21 +116,21 @@ export default function SignupPage() {
                   </svg>
                   使用 Google 注册
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full border-cyan-500/30 text-cyan-100/80 hover:bg-cyan-500/10 hover:border-cyan-400 bg-transparent">
                   <Github className="w-5 h-5 mr-2" />
                   使用 GitHub 注册
                 </Button>
               </div>
 
               <div className="relative mb-6">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
+                <Separator className="bg-cyan-500/20" />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#0d1425] px-2 text-sm text-cyan-100/40">
                   或使用邮箱
                 </span>
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center gap-2 text-sm">
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-lg flex items-center gap-2 text-sm mb-4">
                   <AlertCircle className="w-4 h-4" />
                   {error}
                 </div>
@@ -131,51 +138,51 @@ export default function SignupPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">用户名</label>
+                  <label className="text-sm font-medium text-cyan-100/80">用户名</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-500/50" />
                     <Input
                       placeholder="设置用户名"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="pl-10"
+                      className="pl-10 bg-[#020818] border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/25 focus:border-cyan-400"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">邮箱</label>
+                  <label className="text-sm font-medium text-cyan-100/80">邮箱</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-500/50" />
                     <Input
                       type="email"
                       placeholder="your@email.com"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="pl-10"
+                      className="pl-10 bg-[#020818] border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/25 focus:border-cyan-400"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">密码</label>
+                  <label className="text-sm font-medium text-cyan-100/80">密码</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-500/50" />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="设置密码（至少8位）"
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 bg-[#020818] border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/25 focus:border-cyan-400"
                       required
                       minLength={8}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-500/50 hover:text-cyan-400"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -183,29 +190,29 @@ export default function SignupPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">确认密码</label>
+                  <label className="text-sm font-medium text-cyan-100/80">确认密码</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-500/50" />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="再次输入密码"
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                      className="pl-10"
+                      className="pl-10 bg-[#020818] border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/25 focus:border-cyan-400"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2 text-sm">
-                  <input type="checkbox" className="mt-1 rounded border-gray-300" required />
-                  <span className="text-gray-600">
+                  <input type="checkbox" className="mt-1 rounded border-cyan-500/40 bg-transparent accent-cyan-500" required />
+                  <span className="text-cyan-100/50">
                     我已阅读并同意{' '}
-                    <Link href="/terms" className="text-orange-500 hover:underline">
+                    <Link href="/terms" className="text-cyan-400 hover:text-cyan-300">
                       服务条款
                     </Link>
                     {' '}和{' '}
-                    <Link href="/privacy" className="text-orange-500 hover:underline">
+                    <Link href="/privacy" className="text-cyan-400 hover:text-cyan-300">
                       隐私政策
                     </Link>
                   </span>
@@ -213,7 +220,7 @@ export default function SignupPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full"
+                  className="w-full bg-cyan-500 text-black hover:bg-cyan-400 font-semibold"
                   disabled={isLoading}
                 >
                   {isLoading ? '注册中...' : '创建账号'}
@@ -221,9 +228,9 @@ export default function SignupPage() {
                 </Button>
               </form>
 
-              <p className="text-center text-sm text-gray-600 mt-6">
+              <p className="text-center text-sm text-cyan-100/50 mt-6">
                 已有账号？{' '}
-                <Link href="/login" className="text-orange-500 hover:underline font-medium">
+                <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium">
                   立即登录
                 </Link>
               </p>

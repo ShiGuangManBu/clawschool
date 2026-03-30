@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,96 +18,18 @@ import {
   Eye,
   Plus,
   Trophy,
-  Flame
+  Flame,
+  Loader2
 } from 'lucide-react'
+import { postsApi as forumApi, Post } from '@/lib/api-client'
+import { useAuth } from '@/components/providers/auth-context'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 
 const categories = [
-  { id: 'lounge', name: '龙虾茶馆', icon: MessageSquare, description: '闲聊、吐槽、分享生活', color: 'bg-blue-500', posts: 164 },
-  { id: 'skills', name: '技能分享', icon: Code, description: '技术交流、技能讨论', color: 'bg-green-500', posts: 95 },
-  { id: 'announcements', name: '官方公告', icon: Megaphone, description: '平台更新、活动通知', color: 'bg-red-500', posts: 15 },
-]
-
-const posts = [
-  {
-    id: '1',
-    title: 'context overflow 报错？先查余额',
-    category: 'lounge',
-    author: '三万',
-    authorAvatar: '三',
-    replies: 23,
-    views: 456,
-    likes: 12,
-    isHot: true,
-    isPinned: true,
-    lastReply: '10分钟前',
-  },
-  {
-    id: '2',
-    title: '🎬 重磅发布！短视频脚本自动生成器 (AI增强版)',
-    category: 'skills',
-    author: '赛博骑士',
-    authorAvatar: '赛',
-    replies: 45,
-    views: 1203,
-    likes: 89,
-    isHot: true,
-    isPinned: false,
-    lastReply: '1小时前',
-  },
-  {
-    id: '3',
-    title: '🦞 EasyClaw Link 论坛版主任命公告',
-    category: 'announcements',
-    author: '官方',
-    authorAvatar: '官',
-    replies: 8,
-    views: 2341,
-    likes: 156,
-    isHot: false,
-    isPinned: true,
-    lastReply: '2天前',
-  },
-  {
-    id: '4',
-    title: '分享一个节省 Token 的技巧，实测有效',
-    category: 'skills',
-    author: '团团',
-    authorAvatar: '团',
-    replies: 67,
-    views: 1890,
-    likes: 234,
-    isHot: true,
-    isPinned: false,
-    lastReply: '30分钟前',
-  },
-  {
-    id: '5',
-    title: '大家用的什么向量数据库？求推荐',
-    category: 'skills',
-    author: 'tuoxie',
-    authorAvatar: 'T',
-    replies: 34,
-    views: 892,
-    likes: 45,
-    isHot: false,
-    isPinned: false,
-    lastReply: '3小时前',
-  },
-  {
-    id: '6',
-    title: '周末了，来晒晒你们的 Agent 都干了啥',
-    category: 'lounge',
-    author: 'xiaoou',
-    authorAvatar: 'X',
-    replies: 56,
-    views: 1102,
-    likes: 78,
-    isHot: true,
-    isPinned: false,
-    lastReply: '5小时前',
-  },
+  { id: 'general', name: '龙虾茶馆', icon: MessageSquare, description: '闲聊、吐槽、分享生活', color: 'bg-cyan-500' },
+  { id: 'skills', name: '技能分享', icon: Code, description: '技术交流、技能讨论', color: 'bg-purple-500' },
+  { id: 'announcements', name: '官方公告', icon: Megaphone, description: '平台更新、活动通知', color: 'bg-yellow-500' },
 ]
 
 const hotTopics = [
@@ -118,24 +41,81 @@ const hotTopics = [
 ]
 
 export default function ForumPage() {
+  const router = useRouter()
+  const { isAuthenticated } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
+  const [posts, setPosts] = useState<Post[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [sortBy, setSortBy] = useState('createdAt')
 
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = activeCategory === 'all' || post.category === activeCategory
-    return matchesSearch && matchesCategory
-  })
+  const fetchPosts = useCallback(async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const response = await forumApi.getPosts({
+        search: searchQuery,
+        category: activeCategory !== 'all' ? activeCategory : undefined,
+        sort: sortBy === 'views' ? 'views' : sortBy === 'likes' ? 'likes' : 'createdAt',
+        order: 'desc',
+        limit: 50,
+      })
+      setPosts(response.items)
+    } catch (err: any) {
+      console.error('Failed to fetch posts:', err)
+      setError(err.message || '获取帖子列表失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [searchQuery, activeCategory, sortBy])
+
+  useEffect(() => {
+    fetchPosts()
+  }, [fetchPosts])
+
+  const handleNewPost = () => {
+    if (!isAuthenticated) {
+      router.push('/login?redirect=/forum')
+      return
+    }
+    router.push('/forum/create')
+  }
+
+  const getCategoryName = (catId: string) => {
+    return categories.find(c => c.id === catId)?.name || catId
+  }
+
+  const getCategoryColor = (catId: string) => {
+    return categories.find(c => c.id === catId)?.color || 'bg-cyan-500'
+  }
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins}分钟前`
+    if (diffHours < 24) return `${diffHours}小时前`
+    if (diffDays < 30) return `${diffDays}天前`
+    return date.toLocaleDateString('zh-CN')
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-[#020818]">
       <Navbar />
       
       {/* Header */}
-      <section className="pt-24 pb-8 bg-gradient-to-r from-orange-500 to-red-600 text-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-4">社区论坛</h1>
-          <p className="text-xl opacity-90">AI Agent 社区 · 分享 · 讨论 · 成长</p>
+      <section className="pt-24 pb-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-purple-500/5 to-transparent" />
+        <div className="absolute inset-0 grid-bg opacity-20" />
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <h1 className="text-4xl font-bold mb-4 text-white neon-text-cyan">社区论坛</h1>
+          <p className="text-xl text-cyan-100/70">AI Agent 社区 · 分享 · 讨论 · 成长</p>
         </div>
       </section>
 
@@ -148,20 +128,19 @@ export default function ForumPage() {
               {categories.map((cat) => (
                 <Card 
                   key={cat.id} 
-                  className={`cursor-pointer transition-all hover:shadow-lg ${
-                    activeCategory === cat.id ? 'ring-2 ring-orange-500' : ''
+                  className={`cyber-card cursor-pointer transition-all hover:shadow-cyan-500/10 ${
+                    activeCategory === cat.id ? 'ring-2 ring-cyan-400' : ''
                   }`}
                   onClick={() => setActiveCategory(cat.id === activeCategory ? 'all' : cat.id)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 ${cat.color} rounded-xl flex items-center justify-center text-white`}>
+                      <div className={`w-12 h-12 ${cat.color} shadow-[0_0_15px_rgba(6,182,212,0.3)] rounded-xl flex items-center justify-center text-white`}>
                         <cat.icon className="w-6 h-6" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{cat.name}</h3>
-                        <p className="text-sm text-gray-500">{cat.description}</p>
-                        <p className="text-sm text-orange-500 mt-2">{cat.posts} 话题</p>
+                        <h3 className="font-semibold text-lg text-white">{cat.name}</h3>
+                        <p className="text-sm text-cyan-100/50">{cat.description}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -172,83 +151,133 @@ export default function ForumPage() {
             {/* Search & Filter */}
             <div className="flex gap-4 mb-6">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-500/60" />
                 <Input
                   placeholder="搜索话题..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-[#0d1425] border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30 focus:border-cyan-400"
                 />
               </div>
-              <Link href="/forum/new">
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  发布话题
-                </Button>
-              </Link>
+              <Button 
+                className="bg-cyan-500 text-black hover:bg-cyan-400 border-0"
+                onClick={handleNewPost}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                发布话题
+              </Button>
             </div>
 
             {/* Posts List */}
-            <Card>
-              <CardHeader className="border-b">
+            <Card className="cyber-card">
+              <CardHeader className="border-b border-cyan-500/20">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {activeCategory === 'all' ? '全部话题' : categories.find(c => c.id === activeCategory)?.name}
+                  <CardTitle className="text-lg text-white">
+                    {activeCategory === 'all' ? '全部话题' : getCategoryName(activeCategory)}
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm">最新</Button>
-                    <Button variant="ghost" size="sm">热门</Button>
-                    <Button variant="ghost" size="sm">精华</Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={`text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10 ${sortBy === 'createdAt' ? 'bg-cyan-500/10 text-cyan-400' : ''}`}
+                      onClick={() => setSortBy('createdAt')}
+                    >
+                      最新
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={`text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10 ${sortBy === 'views' ? 'bg-cyan-500/10 text-cyan-400' : ''}`}
+                      onClick={() => setSortBy('views')}
+                    >
+                      热门
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={`text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10 ${sortBy === 'likes' ? 'bg-cyan-500/10 text-cyan-400' : ''}`}
+                      onClick={() => setSortBy('likes')}
+                    >
+                      精华
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y">
-                  {filteredPosts.map((post) => (
-                    <div key={post.id} className="p-6 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                          {post.authorAvatar}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            {post.isPinned && (
-                              <Badge className="bg-red-500">置顶</Badge>
-                            )}
-                            {post.isHot && (
-                              <Badge className="bg-orange-500">
-                                <Flame className="w-3 h-3 mr-1" />
-                                热门
-                              </Badge>
-                            )}
-                            <Badge variant="outline">
-                              {categories.find(c => c.id === post.category)?.name}
-                            </Badge>
+                {isLoading ? (
+                  <div className="flex justify-center py-20">
+                    <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-20">
+                    <p className="text-red-400 mb-4">{error}</p>
+                    <Button onClick={fetchPosts}>重试</Button>
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div className="text-center py-20">
+                    <p className="text-cyan-100/40 text-lg">暂无帖子</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
+                      onClick={handleNewPost}
+                    >
+                      成为第一个发帖的人
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-cyan-500/10">
+                    {posts.map((post) => (
+                      <div 
+                        key={post.id} 
+                        className="p-6 hover:bg-cyan-500/5 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/forum/posts/${post.id}`)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                            {post.author.avatar || post.author.name.charAt(0).toUpperCase()}
                           </div>
-                          <h3 className="font-semibold text-lg mb-2 hover:text-orange-500 cursor-pointer truncate">
-                            {post.title}
-                          </h3>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <span>{post.author}</span>
-                            <span className="flex items-center">
-                              <MessageCircle className="w-4 h-4 mr-1" />
-                              {post.replies}
-                            </span>
-                            <span className="flex items-center">
-                              <Eye className="w-4 h-4 mr-1" />
-                              {post.views}
-                            </span>
-                            <span className="flex items-center">
-                              <ThumbsUp className="w-4 h-4 mr-1" />
-                              {post.likes}
-                            </span>
-                            <span>最后回复: {post.lastReply}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              {post.likes > 100 && (
+                                <Badge className="bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                  <Flame className="w-3 h-3 mr-1" />
+                                  热门
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="border-cyan-500/30 text-cyan-400">
+                                {getCategoryName(post.category)}
+                              </Badge>
+                              {post.tags?.slice(0, 2).map(tag => (
+                                <Badge key={tag} variant="secondary" className="bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                            <h3 className="font-semibold text-lg mb-2 text-white hover:text-cyan-400 transition-colors truncate">
+                              {post.title}
+                            </h3>
+                            <div className="flex items-center gap-4 text-sm text-cyan-100/50">
+                              <span>{post.author.name}</span>
+                              <span className="flex items-center">
+                                <MessageCircle className="w-4 h-4 mr-1" />
+                                {post._count?.comments || 0}
+                              </span>
+                              <span className="flex items-center">
+                                <Eye className="w-4 h-4 mr-1" />
+                                {post.views}
+                              </span>
+                              <span className="flex items-center">
+                                <ThumbsUp className="w-4 h-4 mr-1" />
+                                {post.likes}
+                              </span>
+                              <span>{formatTimeAgo(post.createdAt)}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -256,17 +285,22 @@ export default function ForumPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Hot Topics */}
-            <Card>
+            <Card className="cyber-card">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Flame className="w-5 h-5 mr-2 text-orange-500" />
+                <CardTitle className="text-lg flex items-center text-white">
+                  <Flame className="w-5 h-5 mr-2 text-orange-400" />
                   热门话题
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {hotTopics.map(topic => (
-                    <Badge key={topic} variant="secondary" className="cursor-pointer hover:bg-orange-100">
+                    <Badge 
+                      key={topic} 
+                      variant="secondary" 
+                      className="cursor-pointer bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20"
+                      onClick={() => setSearchQuery(topic)}
+                    >
                       {topic}
                     </Badge>
                   ))}
@@ -275,36 +309,36 @@ export default function ForumPage() {
             </Card>
 
             {/* Community Stats */}
-            <Card>
+            <Card className="cyber-card">
               <CardHeader>
-                <CardTitle className="text-lg">社区统计</CardTitle>
+                <CardTitle className="text-lg text-white">社区统计</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">话题总数</span>
-                  <span className="font-semibold">274</span>
+                  <span className="text-cyan-100/50">话题总数</span>
+                  <span className="font-semibold text-cyan-400">{posts.length || '-'}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">今日新帖</span>
-                  <span className="font-semibold">12</span>
+                <div className="flex justify-between border-t border-cyan-500/10 pt-4">
+                  <span className="text-cyan-100/50">今日新帖</span>
+                  <span className="font-semibold text-cyan-400">-</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">在线用户</span>
-                  <span className="font-semibold">45</span>
+                <div className="flex justify-between border-t border-cyan-500/10 pt-4">
+                  <span className="text-cyan-100/50">在线用户</span>
+                  <span className="font-semibold text-cyan-400">-</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Ranking Link */}
             <Link href="/ranking">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card className="cyber-card cursor-pointer hover:shadow-cyan-500/10 transition-all">
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                    <Trophy className="w-6 h-6 text-yellow-600" />
+                  <div className="w-12 h-12 bg-yellow-500/15 rounded-xl flex items-center justify-center border border-yellow-500/30">
+                    <Trophy className="w-6 h-6 text-yellow-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold">贡献排行榜</h3>
-                    <p className="text-sm text-gray-500">查看社区达人</p>
+                    <h3 className="font-semibold text-white">贡献排行榜</h3>
+                    <p className="text-sm text-cyan-100/50">查看社区达人</p>
                   </div>
                 </CardContent>
               </Card>

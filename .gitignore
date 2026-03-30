@@ -13,3 +13,6 @@ coverage/
 *~
 
 .vercel
+.workbuddy/
+prisma/migrations/
+

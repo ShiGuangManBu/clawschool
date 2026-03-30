@@ -28,6 +28,10 @@ model User {
   auditLogs   AuditLog[]
   
   reviewedSkills Skill[] @relation("SkillReviewer")
+  
+  // 论坛相关
+  posts        Post[]
+  postComments PostComment[]
 }
 
 enum Role {
@@ -147,4 +151,43 @@ model AuditLog {
 
   userId    String
   user      User   @relation(fields: [userId], references: [id])
+}
+
+// 论坛帖子
+model Post {
+  id        String      @id @default(cuid())
+  title     String
+  content   String      @db.Text
+  category  String      @default("general")
+  tags      String[]
+  views     Int         @default(0)
+  likes     Int         @default(0)
+  status    PostStatus  @default(PUBLISHED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id])
+  
+  comments  PostComment[]
+}
+
+enum PostStatus {
+  PUBLISHED
+  DRAFT
+  DELETED
+}
+
+// 帖子评论
+model PostComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId  String
+  author    User   @relation(fields: [authorId], references: [id])
+  postId    String
+  post      Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 }

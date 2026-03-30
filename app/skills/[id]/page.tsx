@@ -1,347 +1,526 @@
 'use client'
 
-import { useState } from 'react'
-import { useParams } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { 
-  Star, 
-  Download, 
-  Clock, 
-  User, 
-  CheckCircle, 
-  Copy, 
-  Check,
-  ArrowLeft,
-  ExternalLink,
-  MessageSquare,
-  Heart
+  Star, Download, ArrowLeft, User, Calendar, Eye, 
+  MessageSquare, Share2, Heart, Loader2, CheckCircle, AlertTriangle,
+  Code, BookOpen, Shield, Zap
 } from 'lucide-react'
+import { skillsApi, reviewsApi, Review } from '@/lib/api-client'
+import { useAuth } from '@/components/providers/auth-context'
 import Navbar from '@/components/navbar'
 import Footer from '@/components/footer'
 
-// Mock data - 实际应从 API 获取
-const skillData = {
-  id: '1',
-  name: 'Agent Memory',
-  description: '六层记忆架构系统，支持长期记忆存储与检索，让AI拥有真正的记忆能力。基于先进的向量数据库和语义检索技术，实现高效的记忆存取。',
-  longDescription: `
-## 功能特性
-
-- **六层记忆架构**: SOUL → MEMORY → P0热 → P1温 → P4档案 → P5冷
-- **自动分层**: 根据访问频率自动调整记忆层级
-- **语义检索**: 基于向量相似度的智能记忆召回
-- **持久化存储**: 支持多种存储后端（本地文件、数据库、云存储）
-
-## 使用场景
-
-1. 长期对话上下文保持
-2. 用户偏好学习
-3. 知识积累与复用
-4. 多会话状态同步
-
-## 技术栈
-
-- TypeScript
-- Vector DB (Pinecone/Milvus)
-- OpenAI Embeddings
-- Prisma ORM
-  `,
-  author: 'Sanwan',
-  authorAvatar: 'S',
-  rating: 4.9,
-  downloads: 443,
-  category: 'Core',
-  verified: true,
-  version: '2.1.0',
-  updatedAt: '2026-03-20',
-  license: 'MIT',
-  tags: ['记忆', '存储', '核心', '向量检索', '持久化'],
-  dependencies: ['@prisma/client', 'openai', 'pinecone-client'],
-  code: `import { MemoryManager } from '@clawschool/agent-memory'
-
-// 初始化记忆管理器
-const memory = new MemoryManager({
-  tiers: 6,  // 六层架构
-  vectorDB: 'pinecone',
-  embeddingModel: 'text-embedding-3-small'
-})
-
-// 存储记忆
-await memory.store({
-  content: '用户喜欢深色模式',
-  context: { userId: 'user_123' },
-  importance: 0.8
-})
-
-// 检索记忆
-const memories = await memory.retrieve({
-  query: '用户偏好设置',
-  limit: 5,
-  minRelevance: 0.7
-})`,
-  reviews: [
-    {
-      id: '1',
-      user: 'LobsterDev',
-      avatar: 'L',
-      rating: 5,
-      content: '非常好用的记忆系统，六层架构设计很合理，检索速度也很快！',
-      date: '2026-03-15',
-    },
-    {
-      id: '2',
-      user: 'AIBuilder',
-      avatar: 'A',
-      rating: 5,
-      content: '解决了长期困扰我的上下文保持问题，强烈推荐。',
-      date: '2026-03-10',
-    },
-    {
-      id: '3',
-      user: 'CodeMaster',
-      avatar: 'C',
-      rating: 4,
-      content: '功能强大，但文档可以更详细一些。',
-      date: '2026-03-05',
-    },
-  ],
-}
-
 export default function SkillDetailPage() {
   const params = useParams()
-  const [copied, setCopied] = useState(false)
-  const [liked, setLiked] = useState(false)
+  const router = useRouter()
+  const { user, isAuthenticated } = useAuth()
+  const skillId = params.id as string
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(skillData.code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const [skill, setSkill] = useState<any>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
+
+  // 评论相关
+  const [newReview, setNewReview] = useState('')
+  const [rating, setRating] = useState(5)
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+
+  const fetchSkillDetail = useCallback(async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const data = await skillsApi.getById(skillId)
+      setSkill(data)
+    } catch (err: any) {
+      console.error('Failed to fetch skill:', err)
+      setError(err.message || '获取技能详情失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [skillId])
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const data = await reviewsApi.getList(skillId)
+      setReviews(data)
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err)
+    }
+  }, [skillId])
+
+  useEffect(() => {
+    fetchSkillDetail()
+    fetchReviews()
+  }, [fetchSkillDetail, fetchReviews])
+
+  const handleDownload = async () => {
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/skills/${skillId}`)
+      return
+    }
+
+    setIsDownloading(true)
+    try {
+      await skillsApi.download(skillId)
+      // 刷新数据
+      fetchSkillDetail()
+    } catch (err: any) {
+      alert(err.message || '下载失败')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const handleSubmitReview = async () => {
+    if (!isAuthenticated) {
+      router.push('/login')
+      return
+    }
+
+    if (!newReview.trim()) {
+      alert('请输入评论内容')
+      return
+    }
+
+    setIsSubmittingReview(true)
+    try {
+      await reviewsApi.create(skillId, {
+        content: newReview,
+        rating,
+      })
+      setNewReview('')
+      setRating(5)
+      fetchReviews()
+      fetchSkillDetail()
+    } catch (err: any) {
+      alert(err.message || '评论失败')
+    } finally {
+      setIsSubmittingReview(false)
+    }
+  }
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: skill?.name,
+        text: skill?.description,
+        url: window.location.href,
+      })
+    } else {
+      navigator.clipboard.writeText(window.location.href)
+      alert('链接已复制到剪贴板')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-[#020818]">
+        <Navbar />
+        <div className="flex justify-center items-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+        </div>
+        <Footer />
+      </main>
+    )
+  }
+
+  if (error || !skill) {
+    return (
+      <main className="min-h-screen bg-[#020818]">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] pt-24">
+          <h2 className="text-2xl font-bold text-white mb-4">技能不存在</h2>
+          <p className="text-cyan-100/60 mb-6">{error || '该技能可能已被删除'}</p>
+          <Button onClick={() => router.push('/skills')} className="bg-cyan-500 text-black hover:bg-cyan-400">
+            返回技能市场
+          </Button>
+        </div>
+        <Footer />
+      </main>
+    )
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#020818]">
       <Navbar />
-      
-      <div className="pt-24 pb-12">
+
+      {/* Back Button */}
+      <div className="pt-24 pb-4">
         <div className="max-w-7xl mx-auto px-4">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-            <Link href="/" className="hover:text-gray-900">首页</Link>
-            <span>/</span>
-            <Link href="/skills" className="hover:text-gray-900">技能市场</Link>
-            <span>/</span>
-            <span className="text-gray-900">{skillData.name}</span>
-          </div>
+          <Button 
+            variant="ghost" 
+            onClick={() => router.back()}
+            className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 -ml-3"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            返回
+          </Button>
+        </div>
+      </div>
 
+      {/* Main Content */}
+      <section className="pb-16">
+        <div className="max-w-7xl mx-auto px-4">
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2">
+            {/* Left - Main Info */}
+            <div className="lg:col-span-2 space-y-6">
               {/* Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-3 mb-4">
-                  {skillData.verified && (
-                    <Badge className="bg-green-500">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      已验证
+              <Card className="cyber-card">
+                <CardHeader>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <Badge className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                      {skill.category}
                     </Badge>
+                    {skill.verified && (
+                      <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        已验证
+                      </Badge>
+                    )}
+                    {skill.riskLevel && (
+                      <Badge variant="outline" className={
+                        skill.riskLevel === 'LOW' ? 'border-green-500/40 text-green-400' :
+                        skill.riskLevel === 'MEDIUM' ? 'border-yellow-500/40 text-yellow-400' :
+                        'border-red-500/40 text-red-400'
+                      }>
+                        <Shield className="w-3 h-3 mr-1" />
+                        {skill.riskLevel === 'LOW' ? '低风险' : skill.riskLevel === 'MEDIUM' ? '中风险' : '高风险'}
+                      </Badge>
+                    )}
+                    {skill.status === 'PENDING_REVIEW' && (
+                      <Badge variant="outline" className="border-yellow-500/40 text-yellow-400">
+                        待审核
+                      </Badge>
+                    )}
+                  </div>
+                  <CardTitle className="text-3xl text-white mb-4">{skill.name}</CardTitle>
+                  <div className="flex flex-wrap gap-4 text-sm text-cyan-100/60">
+                    <span className="flex items-center">
+                      <User className="w-4 h-4 mr-1" />
+                      {skill.author?.name || '未知作者'}
+                    </span>
+                    <span className="flex items-center">
+                      <Calendar className="w-4 h-4 mr-1" />
+                      {new Date(skill.createdAt).toLocaleDateString('zh-CN')}
+                    </span>
+                    <span className="flex items-center">
+                      <Eye className="w-4 h-4 mr-1" />
+                      {skill.downloads || 0} 次下载
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-cyan-100/80 leading-relaxed">{skill.description}</p>
+
+                  {/* Tags */}
+                  {skill.tags && skill.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-6">
+                      {skill.tags.map((tag: string) => (
+                        <span key={tag} className="text-sm bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full border border-cyan-500/20">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                  <Badge variant="outline">{skillData.category}</Badge>
-                  <Badge variant="secondary">v{skillData.version}</Badge>
-                </div>
-                <h1 className="text-4xl font-bold mb-4">{skillData.name}</h1>
-                <p className="text-xl text-gray-600">{skillData.description}</p>
-              </div>
-
-              {/* Tabs */}
-              <Tabs defaultValue="readme" className="mb-8">
-                <TabsList className="w-full justify-start">
-                  <TabsTrigger value="readme">使用说明</TabsTrigger>
-                  <TabsTrigger value="code">代码</TabsTrigger>
-                  <TabsTrigger value="reviews">评价 ({skillData.reviews.length})</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="readme" className="mt-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="prose max-w-none">
-                        <div dangerouslySetInnerHTML={{ 
-                          __html: skillData.longDescription
-                            .replace(/## (.*)/g, '<h2 class="text-2xl font-bold mt-8 mb-4">$1</h2>')
-                            .replace(/- \*\*(.*?)\*\*: (.*)/g, '<li class="mb-2"><strong>$1</strong>: $2</li>')
-                            .replace(/\n/g, '<br/>')
-                        }} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="code" className="mt-6">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle className="text-lg">示例代码</CardTitle>
-                      <Button variant="outline" size="sm" onClick={handleCopy}>
-                        {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                        {copied ? '已复制' : '复制'}
-                      </Button>
-                    </CardHeader>
-                    <CardContent>
-                      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                        <code>{skillData.code}</code>
-                      </pre>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="mt-6">
-                    <CardHeader>
-                      <CardTitle className="text-lg">依赖项</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {skillData.dependencies.map(dep => (
-                          <code key={dep} className="bg-gray-100 px-3 py-1 rounded text-sm">
-                            {dep}
-                          </code>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="reviews" className="mt-6">
-                  <div className="space-y-4">
-                    {skillData.reviews.map(review => (
-                      <Card key={review.id}>
-                        <CardContent className="p-6">
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white font-bold">
-                              {review.avatar}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold">{review.user}</span>
-                                  <div className="flex">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star 
-                                        key={i} 
-                                        className={`w-4 h-4 ${i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                                <span className="text-sm text-gray-500">{review.date}</span>
-                              </div>
-                              <p className="text-gray-600">{review.content}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Action Card */}
-              <Card>
-                <CardContent className="p-6">
-                  <Button className="w-full mb-4" size="lg">
-                    <Download className="w-5 h-5 mr-2" />
-                    安装技能
-                  </Button>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => setLiked(!liked)}
-                    >
-                      <Heart className={`w-4 h-4 mr-2 ${liked ? 'fill-red-500 text-red-500' : ''}`} />
-                      收藏
-                    </Button>
-                    <Button variant="outline" className="flex-1">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      分享
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
 
-              {/* Stats Card */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-2xl font-bold">
-                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                        {skillData.rating}
+              {/* Tabs */}
+              <Card className="cyber-card">
+                <Tabs defaultValue="details" className="w-full">
+                  <TabsList className="w-full bg-[#0d1425] border-b border-cyan-500/20 rounded-none">
+                    <TabsTrigger value="details" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+                      <Code className="w-4 h-4 mr-2" />
+                      详情
+                    </TabsTrigger>
+                    <TabsTrigger value="usage" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      使用方法
+                    </TabsTrigger>
+                    <TabsTrigger value="reviews" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      评价 ({reviews.length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <div className="p-6">
+                    <TabsContent value="details" className="mt-0">
+                      <div className="prose prose-invert max-w-none">
+                        <h3 className="text-xl font-semibold text-white mb-4">技能描述</h3>
+                        <div className="text-cyan-100/80 whitespace-pre-wrap">
+                          {skill.detailedDescription || skill.description}
+                        </div>
+
+                        {skill.capabilities && skill.capabilities.length > 0 && (
+                          <>
+                            <h3 className="text-xl font-semibold text-white mt-8 mb-4">核心能力</h3>
+                            <ul className="space-y-2">
+                              {skill.capabilities.map((cap: string, i: number) => (
+                                <li key={i} className="flex items-start text-cyan-100/80">
+                                  <Zap className="w-4 h-4 text-cyan-400 mr-2 mt-1 flex-shrink-0" />
+                                  {cap}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+
+                        {skill.requirements && (
+                          <>
+                            <h3 className="text-xl font-semibold text-white mt-8 mb-4">前置要求</h3>
+                            <div className="text-cyan-100/80">
+                              {skill.requirements}
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div className="text-sm text-gray-500">评分</div>
+                    </TabsContent>
+
+                    <TabsContent value="usage" className="mt-0">
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="text-xl font-semibold text-white mb-4">安装步骤</h3>
+                          <ol className="space-y-3">
+                            <li className="flex items-start">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-500 text-black flex items-center justify-center text-sm font-bold mr-3">1</span>
+                              <span className="text-cyan-100/80">下载技能文件</span>
+                            </li>
+                            <li className="flex items-start">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-500 text-black flex items-center justify-center text-sm font-bold mr-3">2</span>
+                              <span className="text-cyan-100/80">导入到你的 AI Agent 平台</span>
+                            </li>
+                            <li className="flex items-start">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-500 text-black flex items-center justify-center text-sm font-bold mr-3">3</span>
+                              <span className="text-cyan-100/80">配置必要的 API 密钥和参数</span>
+                            </li>
+                            <li className="flex items-start">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-500 text-black flex items-center justify-center text-sm font-bold mr-3">4</span>
+                              <span className="text-cyan-100/80">开始使用！</span>
+                            </li>
+                          </ol>
+                        </div>
+
+                        {skill.version && (
+                          <div className="bg-[#0d1425] p-4 rounded-lg border border-cyan-500/20">
+                            <p className="text-sm text-cyan-100/60">当前版本</p>
+                            <p className="text-cyan-400 font-mono">v{skill.version}</p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="reviews" className="mt-0">
+                      {/* Review Form */}
+                      {isAuthenticated && (
+                        <div className="mb-8 p-4 bg-[#0d1425] rounded-lg border border-cyan-500/20">
+                          <h4 className="text-white font-medium mb-4">发表评论</h4>
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="text-cyan-100/60 text-sm">评分：</span>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setRating(star)}
+                                className="focus:outline-none"
+                              >
+                                <Star 
+                                  className={`w-5 h-5 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-500'}`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          <Textarea
+                            placeholder="分享你的使用体验..."
+                            value={newReview}
+                            onChange={(e) => setNewReview(e.target.value)}
+                            className="bg-[#0a1628] border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30 mb-4"
+                            rows={3}
+                          />
+                          <Button 
+                            onClick={handleSubmitReview}
+                            disabled={isSubmittingReview}
+                            className="bg-cyan-500 text-black hover:bg-cyan-400"
+                          >
+                            {isSubmittingReview ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : null}
+                            提交评论
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Reviews List */}
+                      {reviews.length === 0 ? (
+                        <div className="text-center py-12">
+                          <MessageSquare className="w-12 h-12 text-cyan-500/30 mx-auto mb-4" />
+                          <p className="text-cyan-100/40">暂无评论，成为第一个评论者吧！</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {reviews.map((review) => (
+                            <div key={review.id} className="border-b border-cyan-500/10 pb-6 last:border-0">
+                              <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                                  {review.user?.name?.charAt(0).toUpperCase() || 'U'}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-white font-medium">{review.user?.name || '匿名用户'}</span>
+                                    <div className="flex">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star 
+                                          key={star}
+                                          className={`w-3 h-3 ${star <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span className="text-cyan-100/40 text-sm">
+                                      {new Date(review.createdAt).toLocaleDateString('zh-CN')}
+                                    </span>
+                                  </div>
+                                  <p className="text-cyan-100/70">{review.content}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </Card>
+            </div>
+
+            {/* Right - Sidebar */}
+            <div className="space-y-6">
+              {/* Download Card */}
+              <Card className="cyber-card sticky top-24">
+                <CardContent className="pt-6">
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center text-yellow-400 mb-1">
+                        <Star className="w-4 h-4 mr-1 fill-yellow-400" />
+                        <span className="font-bold text-white">{skill.rating?.toFixed(1) || '0.0'}</span>
+                      </div>
+                      <p className="text-xs text-cyan-100/50">评分</p>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold">{skillData.downloads}</div>
-                      <div className="text-sm text-gray-500">下载量</div>
+                      <div className="flex items-center justify-center text-cyan-400 mb-1">
+                        <Download className="w-4 h-4 mr-1" />
+                        <span className="font-bold text-white">{skill.downloads || 0}</span>
+                      </div>
+                      <p className="text-xs text-cyan-100/50">下载</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center text-purple-400 mb-1">
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        <span className="font-bold text-white">{reviews.length}</span>
+                      </div>
+                      <p className="text-xs text-cyan-100/50">评论</p>
                     </div>
                   </div>
-                  <Separator className="my-4" />
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">版本</span>
-                      <span>{skillData.version}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">更新于</span>
-                      <span>{skillData.updatedAt}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">协议</span>
-                      <span>{skillData.license}</span>
+
+                  {/* Price / Status */}
+                  <div className="text-center mb-6">
+                    {skill.isFree ? (
+                      <div className="text-3xl font-bold text-cyan-400">免费</div>
+                    ) : skill.price ? (
+                      <div className="text-3xl font-bold text-cyan-400">¥{skill.price}</div>
+                    ) : null}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="space-y-3">
+                    <Button 
+                      className="w-full bg-cyan-500 text-black hover:bg-cyan-400 py-6 text-lg"
+                      onClick={handleDownload}
+                      disabled={isDownloading || skill.status === 'PENDING_REVIEW'}
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-5 h-5 mr-2" />
+                      )}
+                      {skill.status === 'PENDING_REVIEW' ? '审核中' : '免费下载'}
+                    </Button>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        variant="outline" 
+                        className="border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
+                        onClick={() => setIsFavorite(!isFavorite)}
+                      >
+                        <Heart className={`w-4 h-4 mr-2 ${isFavorite ? 'fill-red-400 text-red-400' : ''}`} />
+                        收藏
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
+                        onClick={handleShare}
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        分享
+                      </Button>
                     </div>
                   </div>
+
+                  {/* Risk Warning */}
+                  {skill.riskLevel === 'HIGH' && (
+                    <div className="mt-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                      <div className="flex items-center text-red-400 mb-2">
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        <span className="font-medium text-sm">风险提示</span>
+                      </div>
+                      <p className="text-xs text-red-400/70">
+                        此技能包含高风险操作，使用前请仔细阅读并了解相关风险。
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Author Card */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-4">作者</h3>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                      {skillData.authorAvatar}
+              <Card className="cyber-card">
+                <CardHeader>
+                  <CardTitle className="text-lg text-white">关于作者</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-xl font-bold">
+                      {skill.author?.name?.charAt(0).toUpperCase() || 'A'}
                     </div>
                     <div>
-                      <div className="font-semibold">{skillData.author}</div>
-                      <div className="text-sm text-gray-500">顶级验证官</div>
+                      <p className="text-white font-medium">{skill.author?.name || '未知作者'}</p>
+                      <p className="text-cyan-100/50 text-sm">{skill.author?.role || 'USER'}</p>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full mt-4">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    联系作者
+                  {skill.author?.bio && (
+                    <p className="text-cyan-100/60 text-sm">{skill.author.bio}</p>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-4 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
+                    onClick={() => router.push(`/profile/${skill.author?.id}`)}
+                  >
+                    查看主页
                   </Button>
-                </CardContent>
-              </Card>
-
-              {/* Tags Card */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-4">标签</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {skillData.tags.map(tag => (
-                      <Badge key={tag} variant="secondary">{tag}</Badge>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <Footer />
     </main>

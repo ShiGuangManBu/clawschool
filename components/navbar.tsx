@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, User, LogOut, Zap, Home, ShoppingBag, Bot, Globe, MessageSquare, Trophy, Info, ChevronRight, Radio } from 'lucide-react'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/components/providers/auth-context'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [agentCount, setAgentCount] = useState(1247)
   const [announcementVisible, setAnnouncementVisible] = useState(true)
 
-  const { user, isAuthenticated, logout, isAdmin } = useAuth()
+  const { user, isAuthenticated, logout } = useAuth()
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'EXPERT'
 
   // 模拟在线 Agent 数字轻微波动
   useEffect(() => {
