@@ -1,7 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { verifyPassword, generateToken } from '@/lib/auth'
 import { apiResponse, apiError, validateEmail } from '@/lib/api-utils'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+const JWT_EXPIRES_IN = '7d'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,17 +42,17 @@ export async function POST(request: NextRequest) {
       return apiError('请使用第三方登录', 401)
     }
 
-    const isValidPassword = await verifyPassword(password, user.password)
+    const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
       return apiError('邮箱或密码错误', 401)
     }
 
     // 生成Token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    })
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    )
 
     // 返回用户信息（不包含密码）
     const { password: _, ...userWithoutPassword } = user

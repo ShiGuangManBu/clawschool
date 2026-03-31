@@ -12,12 +12,14 @@ export interface JWTPayload {
 
 // 哈希密码
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12)
+  const bcryptjs = await import('bcryptjs')
+  return bcryptjs.default.hash(password, 12)
 }
 
 // 验证密码
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword)
+  const bcryptjs = await import('bcryptjs')
+  return bcryptjs.default.compare(password, hashedPassword)
 }
 
 // 生成JWT Token

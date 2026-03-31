@@ -1,7 +1,28 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hashPassword, generateToken } from '@/lib/auth'
-import { apiResponse, apiError, validateEmail, validatePassword } from '@/lib/api-utils'
+import { apiResponse, apiError } from '@/lib/api-utils'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+const JWT_EXPIRES_IN = '7d'
+
+// 邮箱验证
+function validateEmail(email: string): { valid: boolean; message?: string } {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    return { valid: false, message: '请输入有效的邮箱地址' }
+  }
+  return { valid: true }
+}
+
+// 密码验证
+function validatePassword(password: string): { valid: boolean; message?: string } {
+  if (password.length < 6) {
+    return { valid: false, message: '密码至少需要6个字符' }
+  }
+  return { valid: true }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 创建用户
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword = await bcrypt.hash(password, 12)
     const user = await prisma.user.create({
       data: {
         email,
@@ -52,11 +73,11 @@ export async function POST(request: NextRequest) {
     })
 
     // 生成Token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    })
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    )
 
     return apiResponse(
       { user, token },
@@ -64,6 +85,7 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('Register error:', error)
-    return apiError('注册失败，请稍后重试', 500)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return apiError(`注册失败: ${errorMessage}`, 500)
   }
 }
