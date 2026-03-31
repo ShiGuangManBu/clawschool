@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData)
   }
 
-  const register = async (email: string, password: string, name: string) => {
+  const register = async (name: string, email: string, password: string) => {
     const { user: userData, token } = await authApi.register({ email, password, name })
     authStorage.setToken(token)
     authStorage.setUser(userData)
