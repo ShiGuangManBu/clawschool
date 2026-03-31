@@ -61,7 +61,7 @@ export default function ForumPage() {
         order: 'desc',
         limit: 50,
       })
-      setPosts(response.items)
+      setPosts(response.data?.items || response.items || [])
     } catch (err: any) {
       console.error('Failed to fetch posts:', err)
       setError(err.message || '获取帖子列表失败')

@@ -34,7 +34,7 @@ export default function SkillsPage() {
         order: 'desc',
         limit: 50,
       })
-      setSkills(response.items)
+      setSkills(response.data?.items || response.items || [])
     } catch (err: any) {
       console.error('Failed to fetch skills:', err)
       setError(err.message || '获取技能列表失败')
